@@ -1,7 +1,9 @@
 /* eslint-disable no-console */
-import { Text } from "react-native";
+import { View } from "react-native";
 import { METEO_URL, MeteoWeather } from "@src/consts";
 import { useFetch } from "@src/hook";
+
+import { WeatherItem } from "../WeatherItem";
 
 export const Weather = () => {
   const params = {
@@ -22,5 +24,9 @@ export const Weather = () => {
   console.log("data", data?.hourly.time);
   console.log("error", error);
   console.log("loading", loading);
-  return <Text>weather</Text>;
+  return (
+    <View>
+      <WeatherItem />
+    </View>
+  );
 };

@@ -1,13 +1,10 @@
 import { useCallback } from "react";
+import { Realm } from "@realm/react";
 import { MeteoWeather, WeatherForecast } from "@src/consts";
-import { Weather, weatherContext } from "@src/models";
+import { Weather } from "@src/models";
 import { Object } from "realm";
 
-const { useQuery, useRealm } = weatherContext;
-
-export const useWeatherService = () => {
-  const realm = useRealm();
-
+export const useWeatherService = (realm: Realm) => {
   const convertToWeatherForecast = (
     source: Weather & Object<unknown, never>
   ): WeatherForecast => {
@@ -25,15 +22,18 @@ export const useWeatherService = () => {
     };
   };
 
-  const getByName = useCallback((name: string): WeatherForecast | null => {
-    const weathers = useQuery(Weather);
-    const matchedWeathers = weathers.filtered(`name == '${name}'`);
-    if (!matchedWeathers.length) {
-      return null;
-    }
+  const getByName = useCallback(
+    (name: string): WeatherForecast | null => {
+      const weathers = realm.objects(Weather);
+      const matchedWeathers = weathers.filtered(`name == '${name}'`);
+      if (!matchedWeathers.length) {
+        return null;
+      }
 
-    return convertToWeatherForecast(matchedWeathers[0]);
-  }, []);
+      return convertToWeatherForecast(matchedWeathers[0]);
+    },
+    [realm]
+  );
 
   const createWeather = useCallback(
     (name: string, response?: MeteoWeather): WeatherForecast | null => {

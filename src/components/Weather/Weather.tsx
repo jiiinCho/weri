@@ -15,7 +15,7 @@ const { useRealm } = weatherContext;
 
 export const Weather = () => {
   const index = useRef<number>(0);
-  const [weather, setWeather] = useState<WeatherForecast | null>(null);
+  const [weather, setWeather] = useState<WeatherForecast[]>([]);
   const { errors, loading, fetch } = useFetch<MeteoWeather>();
   const realm = useRealm();
   const { getByName, createWeather, upsertWeather } = useWeatherService(realm);
@@ -46,7 +46,11 @@ export const Weather = () => {
             return;
           }
           returnWeather = createWeather(name, data);
-          setWeather(returnWeather);
+          setWeather((previousWeather: WeatherForecast[]) =>
+            returnWeather
+              ? [...previousWeather, returnWeather]
+              : previousWeather
+          );
         });
         return;
       }
@@ -58,12 +62,18 @@ export const Weather = () => {
       if (todayDate !== weatherDate) {
         fetch(fetchOptions).then((data: MeteoWeather) => {
           returnWeather = upsertWeather(foundWeather, data);
-          setWeather(returnWeather);
+          setWeather((previousWeather: WeatherForecast[]) =>
+            returnWeather
+              ? [...previousWeather, returnWeather]
+              : previousWeather
+          );
         });
         return;
       }
 
-      setWeather(returnWeather);
+      setWeather((previousWeather: WeatherForecast[]) =>
+        returnWeather ? [...previousWeather, returnWeather] : previousWeather
+      );
     },
     [createWeather, fetch, getByName, upsertWeather]
   );
@@ -76,7 +86,7 @@ export const Weather = () => {
     return <Text>Loading</Text>;
   }
 
-  if (!weather) {
+  if (!weather.length) {
     return (
       <>
         <Text>No Weather Found</Text>
@@ -94,7 +104,7 @@ export const Weather = () => {
 
   return (
     <View>
-      <WeatherItem weather={weather} />
+      <WeatherItem weather={weather[index.current]} />
       <Button
         title="next"
         onPress={() => {

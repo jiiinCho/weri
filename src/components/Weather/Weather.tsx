@@ -1,21 +1,31 @@
 import { useCallback, useRef, useState } from "react";
-import { Button, Text, View } from "react-native";
+import {
+  Animated,
+  Button,
+  Dimensions,
+  FlatList,
+  Text,
+  View,
+  ViewToken,
+} from "react-native";
 import CityCoordinates from "@src/cityCoordinates.json";
-import { WeatherItem } from "@src/components";
 import { METEO_URL, MeteoWeather, WeatherForecast } from "@src/consts";
 import { FetchOptions, useFetch, useWeatherService } from "@src/hook";
 import { weatherContext } from "@src/models";
 
+import { Paginator } from "../Paginator";
+import { WeatherItem } from "../WeatherItem";
+import { Mock } from "./Mock";
+import { styles } from "./Weather.styles";
 type Coordinate = {
   name: string;
   coordinates: { latitude: number; longitude: number };
 };
-
 const { useRealm } = weatherContext;
 
 export const Weather = () => {
   const index = useRef<number>(0);
-  const [weather, setWeather] = useState<WeatherForecast[]>([]);
+  const [weather, setWeather] = useState<WeatherForecast[]>(Mock);
   const { errors, loading, fetch } = useFetch<MeteoWeather>();
   const realm = useRealm();
   const { getByName, createWeather, upsertWeather } = useWeatherService(realm);
@@ -78,6 +88,27 @@ export const Weather = () => {
     [createWeather, fetch, getByName, upsertWeather]
   );
 
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const directionRef = useRef(0);
+
+  const viewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: Array<ViewToken> }) => {
+      const currenItemIndex = viewableItems[0].index;
+      if (currenItemIndex) {
+        setCurrentIndex((previousIndex: number) => {
+          directionRef.current = currenItemIndex - previousIndex;
+          return currenItemIndex;
+        });
+      }
+    },
+    []
+  );
+
+  const viewConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
+  const weatherRef = useRef(null);
+  const { width } = Dimensions.get("screen");
+
   if (errors) {
     return <Text>error</Text>;
   }
@@ -87,41 +118,61 @@ export const Weather = () => {
   }
 
   if (!weather.length) {
-    return (
-      <>
-        <Text>No Weather Found</Text>
+    return <Text>No Weather Found</Text>;
+  }
+
+  return (
+    <>
+      <View style={styles.root}>
+        <FlatList
+          data={weather}
+          renderItem={({ item }: { item: WeatherForecast }) => (
+            <WeatherItem weather={item} width={width} />
+          )}
+          showsHorizontalScrollIndicator={false}
+          horizontal
+          pagingEnabled
+          bounces={false}
+          keyExtractor={(item: WeatherForecast) => item.id}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+            { useNativeDriver: false } // for background change animation
+          )}
+          viewabilityConfig={viewConfig}
+          onViewableItemsChanged={viewableItemsChanged}
+          scrollEventThrottle={32}
+          ref={weatherRef}
+          getItemLayout={(_, itemIndex: number) => ({
+            length: width,
+            offset: width * itemIndex,
+            index: itemIndex,
+          })}
+        />
+        <Paginator
+          weather={weather}
+          scrollX={scrollX}
+          currentIndex={currentIndex}
+          swipeDirection={directionRef.current > 0 ? "right" : "left"}
+        />
+      </View>
+      <View style={styles.todo}>
         <Button
           title="next"
           onPress={() => {
-            index.current = -1;
+            index.current += 1;
             const coordinate = CityCoordinates[index.current + 1];
             updateWeather(coordinate);
           }}
         />
-      </>
-    );
-  }
-
-  return (
-    <View>
-      <WeatherItem weather={weather[index.current]} />
-      <Button
-        title="next"
-        onPress={() => {
-          index.current += 1;
-          const coordinate = CityCoordinates[index.current + 1];
-          updateWeather(coordinate);
-        }}
-      />
-      <Button
-        title="prev"
-        onPress={() => {
-          index.current -= 1;
-          const coordinate = CityCoordinates[index.current - 1];
-          updateWeather(coordinate);
-        }}
-      />
-      <Text>{index.toString()}</Text>
-    </View>
+        <Button
+          title="prev"
+          onPress={() => {
+            index.current -= 1;
+            const coordinate = CityCoordinates[index.current - 1];
+            updateWeather(coordinate);
+          }}
+        />
+      </View>
+    </>
   );
 };

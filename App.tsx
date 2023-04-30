@@ -1,10 +1,13 @@
 import React from "react";
 import { SafeAreaView, StyleSheet } from "react-native";
+import { weatherContext } from "@src/models";
 import { StatusBar } from "expo-status-bar";
 
 import { Weather } from "./src/components";
 
-export default () => {
+const { RealmProvider } = weatherContext;
+
+const App = () => {
   return (
     <SafeAreaView style={s.container}>
       <StatusBar style="auto" />
@@ -21,3 +24,11 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
 });
+
+export default () => {
+  return (
+    <RealmProvider>
+      <App />
+    </RealmProvider>
+  );
+};

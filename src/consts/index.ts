@@ -1,2 +1,2 @@
 export { METEO_URL } from "./api";
-export type { MeteoWeather } from "./types";
+export type { MeteoWeather, WeatherForecast } from "./types";

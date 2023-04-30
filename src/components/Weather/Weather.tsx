@@ -1,32 +1,40 @@
-/* eslint-disable no-console */
-import { View } from "react-native";
-import { METEO_URL, MeteoWeather } from "@src/consts";
-import { useFetch } from "@src/hook";
+import { useState } from "react";
+import { Button, Text, View } from "react-native";
+import CityCoordinates from "@src/cityCoordinates.json";
+import { WeatherItem } from "@src/components";
 
-import { WeatherItem } from "../WeatherItem";
+type Coordinate = {
+  name: string;
+  coordinates: { latitude: number; longitude: number };
+};
 
 export const Weather = () => {
-  const params = {
-    latitude: 52.52,
-    longitude: 13.41,
-    current_weather: true,
-    hourly: "temperature_2m",
-    forecast_days: 1,
-  };
+  const [index, setIndex] = useState(0);
+  const [coordinate, setCoordinates] = useState<Coordinate>(CityCoordinates[0]);
 
-  const { data, error, loading } = useFetch<MeteoWeather>({
-    url: METEO_URL,
-    params,
-  });
-
-  console.log("data", data?.current_weather);
-  console.log("data", data?.hourly.temperature_2m);
-  console.log("data", data?.hourly.time);
-  console.log("error", error);
-  console.log("loading", loading);
   return (
     <View>
-      <WeatherItem />
+      <WeatherItem
+        name={coordinate.name}
+        latitude={coordinate.coordinates.latitude.toString()}
+        longitude={coordinate.coordinates.longitude.toString()}
+      />
+      <Button
+        title="next"
+        onPress={() => {
+          setCoordinates(CityCoordinates[index + 1]);
+          setIndex((prev: number) => prev + 1);
+        }}
+      />
+      <Button
+        title="prev"
+        onPress={() => {
+          setCoordinates(CityCoordinates[index - 1]);
+
+          setIndex((prev: number) => prev - 1);
+        }}
+      />
+      <Text>{index.toString()}</Text>
     </View>
   );
 };

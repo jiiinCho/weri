@@ -12,6 +12,8 @@ module.exports = function (api) {
           },
         },
       ],
+      "@realm/babel-plugin",
+      ["@babel/plugin-proposal-decorators", { legacy: true }],
     ],
   };
 };

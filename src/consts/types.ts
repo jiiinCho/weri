@@ -1,5 +1,4 @@
 export type MeteoWeather = {
-  current_weather: { temperature: number; time: string };
   hourly: {
     temperature_2m: number[];
     time: string[];
@@ -8,4 +7,13 @@ export type MeteoWeather = {
     temperature_2m: string;
     time: string;
   };
+};
+
+export type WeatherForecast = {
+  name: string;
+  temperature: number[];
+  temperatureUnit: string;
+  time: string[];
+  timeUnit: string;
+  id: string;
 };

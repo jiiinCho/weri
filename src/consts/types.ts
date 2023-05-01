@@ -17,3 +17,10 @@ export type WeatherForecast = {
   timeUnit: string;
   id: string;
 };
+
+export type WeatherInfo = {
+  name: string;
+  currentTemperature: number;
+  highestTemperature: number;
+  lowestTemperature: number;
+};

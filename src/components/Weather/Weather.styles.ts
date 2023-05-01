@@ -3,10 +3,10 @@ import { StyleSheet } from "react-native";
 export const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "tomato",
   },
-  todo: {
-    flexDirection: "row",
+  loader: {
+    justifyContent: "center",
+    alignItems: "center",
   },
   touchableLayer: {
     position: "absolute",
@@ -14,7 +14,6 @@ export const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "dodgerblue",
     opacity: 0,
   },
 });

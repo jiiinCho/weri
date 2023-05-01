@@ -1,22 +1,22 @@
 import { StyleSheet } from "react-native";
+import { COLORS, DIMENSIONS } from "@src/consts";
 
 export const styles = StyleSheet.create({
   root: {
-    flex: 1,
+    height: DIMENSIONS.paginatorHeight,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "gold",
     flexDirection: "row",
   },
   defaultDot: {
     height: 10,
     width: 10,
     borderRadius: 5,
-    backgroundColor: "#493d8a",
+    backgroundColor: COLORS.lightGrey,
     marginHorizontal: 8,
   },
   largeDot: {
-    backgroundColor: "dodgerblue",
+    backgroundColor: COLORS.primary,
   },
   mediumDot: {
     height: 7,

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, Text as DefaultText, View } from "react-native";
+import { Animated, Text as DefaultText, View } from "react-native";
 import {
   Canvas,
   Easing,
@@ -15,7 +15,14 @@ import {
   useValue,
   vec,
 } from "@shopify/react-native-skia";
-import { WeatherForecast } from "@src/consts";
+import {
+  COLORS,
+  DIMENSIONS,
+  FONT_SIZES,
+  WeatherForecast,
+  WeatherInfo,
+} from "@src/consts";
+import { getWeatherInfo } from "@src/utils";
 import { curveBasis, line, scaleLinear, scaleTime } from "d3";
 
 import DMSansRegular from "../../../assets/fonts/DMSans-Regular.ttf";
@@ -64,12 +71,13 @@ export const WeatherGraph = ({
   currentIndex,
   swipeDirection,
 }: WeatherItemProps) => {
-  const graphHeight = height * 0.6;
+  const graphHeight = height * 0.6 - DIMENSIONS.paginatorHeight;
   const graphWidth = width;
+  const temperatureUnit = useValue(weather[0].temperatureUnit);
 
   const margin = {
-    left: 20,
-    right: 20,
+    left: 30,
+    right: 30,
     bottom: 20,
     top: 20,
   };
@@ -221,14 +229,28 @@ export const WeatherGraph = ({
     return result.toSVGString();
   }, [state, transition]);
 
-  const fontSize = 16;
+  const fontSize = FONT_SIZES.md;
   const font = useFont(DMSansRegular, fontSize);
+
+  const [weatherInfo, setWeatherInfo] = useState<WeatherInfo[]>(
+    getWeatherInfo(weather)
+  );
+
+  const translateY = useRef(new Animated.Value(25)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const previousGraphData = graphData.current;
 
     if (graphData.current.length < weather.length) {
-      const newMaps = makeGraph(getWeatherGraphData(weather[currentIndex]));
+      const newWeather = weather[currentIndex];
+      const newWeatherInfo = getWeatherInfo([newWeather]);
+      setWeatherInfo((previousWeatherInfo: WeatherInfo[]) => [
+        ...previousWeatherInfo,
+        ...newWeatherInfo,
+      ]);
+
+      const newMaps = makeGraph(getWeatherGraphData(newWeather));
       graphData.current = [...previousGraphData, newMaps];
     }
 
@@ -245,12 +267,30 @@ export const WeatherGraph = ({
     }
 
     transitionStart(targetIndex);
+
+    translateY.setValue(25);
+    Animated.timing(translateY, {
+      toValue: 0,
+      duration: 350,
+      easing: Easing.cubic,
+      useNativeDriver: true,
+    }).start();
+
+    opacity.setValue(0);
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 350,
+      easing: Easing.cubic,
+      useNativeDriver: true,
+    }).start();
   }, [
     currentIndex,
     getWeatherGraphData,
     makeGraph,
+    opacity,
     swipeDirection,
     transitionStart,
+    translateY,
     weather,
   ]);
 
@@ -259,76 +299,115 @@ export const WeatherGraph = ({
   }
 
   return (
-    <>
-      <View style={styles.root}>
-        <DefaultText>Helsinki</DefaultText>
-        <Canvas
-          style={{
-            width: graphWidth,
-            height: graphHeight,
-          }}
-        >
-          <Path style="stroke" path={path} strokeWidth={4} color="#6231ff" />
-          {yAxis.yAxisPosition.map((yPosition: number, index: number) => (
+    <View style={styles.root}>
+      <Animated.View
+        style={[
+          styles.currentTemperatureContainer,
+          {
+            opacity,
+            width,
+            paddingLeft: margin.left,
+            paddingRight: margin.right,
+            transform: [{ translateY }],
+          },
+        ]}
+      >
+        <DefaultText style={styles.currentTemperature}>
+          {weatherInfo[currentIndex].currentTemperature}
+        </DefaultText>
+        <DefaultText style={styles.temperatureUnit}>
+          {temperatureUnit.current}
+        </DefaultText>
+      </Animated.View>
+      <Animated.View
+        style={{
+          opacity,
+          width,
+          paddingLeft: margin.left,
+          paddingRight: margin.right,
+          transform: [{ translateY }],
+        }}
+      >
+        <View style={styles.temperatureInfo}>
+          <DefaultText style={styles.title}>
+            {weatherInfo[currentIndex].name}
+          </DefaultText>
+          <View style={styles.minMaxTemperatureContainer}>
+            <DefaultText style={styles.minMaxTemperature}>
+              {`H: ${weatherInfo[currentIndex].highestTemperature}${temperatureUnit.current}`}
+            </DefaultText>
+            <DefaultText
+              style={[styles.minMaxTemperature, styles.spacing]}
+            >{`L: ${weatherInfo[currentIndex].lowestTemperature}${temperatureUnit.current}`}</DefaultText>
+          </View>
+        </View>
+      </Animated.View>
+      <Canvas
+        style={{
+          width: graphWidth,
+          height: graphHeight,
+        }}
+      >
+        <Path
+          style="stroke"
+          path={path}
+          strokeWidth={4}
+          color={COLORS.primary}
+        />
+        {yAxis.yAxisPosition.map((yPosition: number, index: number) => (
+          <Group key={index}>
+            <Line
+              p1={vec(margin.left, yPosition)}
+              p2={vec(graphWidth - margin.right, yPosition)}
+              color={COLORS.lightGrey}
+              style="stroke"
+              strokeWidth={0.5}
+              opacity={transition}
+            />
+            <Text
+              text={
+                index === yAxis.yAxisPosition.length - 1
+                  ? temperatureUnit.current
+                  : yAxis.yAxisText[index].toString()
+              }
+              font={font}
+              color={COLORS.grey}
+              x={graphWidth - margin.right + 2}
+              y={yPosition + fontSize * 0.4}
+              opacity={transition}
+            />
+          </Group>
+        ))}
+        {xAxisRef.current.xAxisText.map((text: number, index: number) => {
+          const xPosition = xAxisRef.current
+            ? xAxisRef.current.yAxisPositionUnit * index + margin.left
+            : 0;
+
+          if (index % 6 !== 0) {
+            return null;
+          }
+          return (
             <Group key={index}>
               <Line
-                p1={vec(margin.left, yPosition)}
-                p2={vec(graphWidth - margin.right, yPosition)}
-                color="lightgrey"
+                p1={vec(xPosition, margin.top)}
+                p2={vec(xPosition, graphHeight - margin.bottom)}
+                color={COLORS.lightGrey}
                 style="stroke"
-                strokeWidth={1}
+                strokeWidth={0.75}
                 opacity={transition}
               />
               <Text
-                text={yAxis.yAxisText[index].toString()}
+                text={text < 9 ? `0${text.toString()}` : text.toString()}
                 font={font}
-                y={yPosition + fontSize * 0.4}
+                color={COLORS.grey}
+                x={xPosition}
+                y={graphHeight}
                 opacity={transition}
               />
             </Group>
-          ))}
-          {xAxisRef.current.xAxisText.map((text: number, index: number) => {
-            const xPosition = xAxisRef.current
-              ? xAxisRef.current.yAxisPositionUnit * index + margin.left
-              : 0;
-
-            if (index % 6 !== 0) {
-              return null;
-            }
-            return (
-              <Group key={index}>
-                <Line
-                  p1={vec(xPosition, margin.top)}
-                  p2={vec(xPosition, graphHeight - margin.bottom)}
-                  color="lightgrey"
-                  style="stroke"
-                  strokeWidth={1}
-                  opacity={transition}
-                />
-                <Text
-                  text={text.toString()}
-                  font={font}
-                  x={xPosition}
-                  y={graphHeight}
-                  opacity={transition}
-                />
-              </Group>
-            );
-          })}
-        </Canvas>
-      </View>
-      <Button
-        onPress={() => {
-          transitionStart(1);
-        }}
-        title="next"
-      />
-      <Button
-        onPress={() => {
-          transitionStart(0);
-        }}
-        title="prev"
-      />
-    </>
+          );
+        })}
+      </Canvas>
+    </View>
   );
 };

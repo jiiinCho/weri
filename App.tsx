@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { SafeAreaView, StyleSheet } from "react-native";
+import { COLORS } from "@src/consts";
 import { weatherContext } from "@src/models";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
@@ -27,18 +28,19 @@ const App = () => {
   if (!fontsLoaded) {
     return null;
   }
+
   return (
-    <SafeAreaView style={s.container} onLayout={onLayoutRootView}>
+    <SafeAreaView style={styles.root} onLayout={onLayoutRootView}>
       <StatusBar style="auto" />
       <Weather />
     </SafeAreaView>
   );
 };
 
-const s = StyleSheet.create({
-  container: {
+const styles = StyleSheet.create({
+  root: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.white,
     alignItems: "center",
     justifyContent: "center",
   },

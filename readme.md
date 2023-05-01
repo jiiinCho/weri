@@ -3,7 +3,7 @@
 A simple weather chart app built with React Native & D3 & Realm <br />
 Weather data source is from [Open Metod](https://open-meteo.com/)
 
-![weri_demo_sm_AdobeExpress](https://user-images.githubusercontent.com/92979717/235521648-4dbd4fd1-e2af-4169-a0d2-87302d803e79.gif)
+![weriDemo_AdobeExpress](https://user-images.githubusercontent.com/92979717/235522201-473e7a4a-5085-4bfa-8c70-6a773aeafc21.gif)
 
 ## 🤖 Development stack
 

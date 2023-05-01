@@ -143,7 +143,7 @@ export const Weather = () => {
         onTouchEnd={onTouchEnd}
         scrollEnabled={false}
       >
-        <WeatherGraph weather={weather[0]} width={width} height={height} />
+        <WeatherGraph weather={weather} width={width} height={height} />
         <Paginator
           weather={weather}
           scrollX={scrollX}

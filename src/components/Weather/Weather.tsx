@@ -1,13 +1,6 @@
 /* eslint-disable no-console */
 import { useCallback, useRef, useState } from "react";
-import {
-  Animated,
-  Button,
-  Dimensions,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
+import { Button, Dimensions, ScrollView, Text, View } from "react-native";
 import CityCoordinates from "@src/cityCoordinates.json";
 import { METEO_URL, MeteoWeather, WeatherForecast } from "@src/consts";
 import { FetchOptions, useFetch, useSwipe, useWeatherService } from "@src/hook";
@@ -91,7 +84,6 @@ export const Weather = () => {
     [createWeather, fetch, getByName, upsertWeather]
   );
 
-  const scrollX = useRef(new Animated.Value(0)).current;
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const directionRef = useRef(0);
 
@@ -116,12 +108,7 @@ export const Weather = () => {
     });
   };
 
-  const { onTouchStart, onTouchEnd } = useSwipe(
-    scrollX,
-    onSwipeLeft,
-    onSwipeRight,
-    6
-  );
+  const { onTouchStart, onTouchEnd } = useSwipe(onSwipeLeft, onSwipeRight, 6);
 
   if (errors) {
     return <Text>error</Text>;
@@ -146,7 +133,6 @@ export const Weather = () => {
         <WeatherGraph weather={weather} width={width} height={height} />
         <Paginator
           weather={weather}
-          scrollX={scrollX}
           currentIndex={currentIndex}
           swipeDirection={directionRef.current > 0 ? "right" : "left"}
         />

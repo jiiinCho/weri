@@ -4,7 +4,6 @@ import { WeatherForecast } from "@src/consts";
 
 import { styles } from "./Paginator.styles";
 type PaginatorProps = {
-  scrollX: Animated.Value;
   weather: WeatherForecast[];
   currentIndex: number;
   swipeDirection: "right" | "left";

@@ -1,14 +1,18 @@
-/* eslint-disable no-console */
-import { useCallback, useRef, useState } from "react";
-import { Button, Dimensions, ScrollView, Text, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Button, Dimensions, Text, View } from "react-native";
+import {
+  Gesture,
+  GestureDetector,
+  GestureStateChangeEvent,
+  PanGestureHandlerEventPayload,
+} from "react-native-gesture-handler";
 import CityCoordinates from "@src/cityCoordinates.json";
 import { METEO_URL, MeteoWeather, WeatherForecast } from "@src/consts";
-import { FetchOptions, useFetch, useSwipe, useWeatherService } from "@src/hook";
+import { FetchOptions, useFetch, useWeatherService } from "@src/hook";
 import { weatherContext } from "@src/models";
 
 import { Paginator } from "../Paginator";
 import { WeatherGraph } from "../WeatherGraph";
-import { Mock } from "./Mock";
 import { styles } from "./Weather.styles";
 
 type Coordinate = {
@@ -21,7 +25,7 @@ export const Weather = () => {
   const { width, height } = Dimensions.get("screen");
 
   const index = useRef<number>(0);
-  const [weather, setWeather] = useState<WeatherForecast[]>(Mock);
+  const [weather, setWeather] = useState<WeatherForecast[]>([]);
   const { errors, loading, fetch } = useFetch<MeteoWeather>();
   const realm = useRealm();
   const { getByName, createWeather, upsertWeather } = useWeatherService(realm);
@@ -77,38 +81,74 @@ export const Weather = () => {
         return;
       }
 
-      setWeather((previousWeather: WeatherForecast[]) =>
-        returnWeather ? [...previousWeather, returnWeather] : previousWeather
-      );
+      setWeather((previousWeather: WeatherForecast[]) => {
+        const found = previousWeather.find(
+          ({ id }) => id === returnWeather?.id
+        );
+        return found ? previousWeather : [...previousWeather, foundWeather];
+      });
     },
     [createWeather, fetch, getByName, upsertWeather]
   );
+
+  useEffect(() => {
+    updateWeather(CityCoordinates[0]);
+    updateWeather(CityCoordinates[1]);
+    updateWeather(CityCoordinates[2]);
+    updateWeather(CityCoordinates[3]);
+    updateWeather(CityCoordinates[4]);
+  }, [updateWeather]);
 
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const directionRef = useRef(0);
 
   const onSwipeLeft = () => {
     directionRef.current = 1;
+    if (currentIndex >= CityCoordinates.length - 2) {
+      return;
+    }
 
-    setCurrentIndex((previousIndex: number) => {
-      if (previousIndex === weather.length - 1) {
-        return previousIndex;
-      }
-      return previousIndex + 1;
-    });
+    updateWeather(CityCoordinates[currentIndex + 2]);
+    setCurrentIndex((previousIndex: number) => previousIndex + 1);
   };
 
   const onSwipeRight = () => {
     directionRef.current = -1;
-    setCurrentIndex((previousIndex: number) => {
-      if (previousIndex === 0) {
-        return previousIndex;
-      }
-      return previousIndex - 1;
-    });
+    if (currentIndex < 1) {
+      return;
+    }
+
+    updateWeather(CityCoordinates[currentIndex - 1]);
+    setCurrentIndex((previousIndex: number) => previousIndex - 1);
   };
 
-  const { onTouchStart, onTouchEnd } = useSwipe(onSwipeLeft, onSwipeRight, 6);
+  const rangeOffset = 6;
+  const gestureXPosition = useRef(0);
+  const range = width / rangeOffset;
+
+  const gesture = Gesture.Pan()
+    .onBegin(
+      (
+        gestureEvent: GestureStateChangeEvent<PanGestureHandlerEventPayload>
+      ) => {
+        gestureXPosition.current = gestureEvent.translationX;
+      }
+    )
+    .onEnd(
+      (
+        gestureEvent: GestureStateChangeEvent<PanGestureHandlerEventPayload>
+      ) => {
+        const currentXPostion = gestureEvent.translationX;
+        if (currentXPostion - gestureXPosition.current > range) {
+          onSwipeRight();
+        } else if (gestureXPosition.current - currentXPostion > range) {
+          onSwipeLeft();
+        }
+      }
+    )
+    .onFinalize(() => {
+      gestureXPosition.current = 0;
+    });
 
   if (errors) {
     return <Text>error</Text>;
@@ -123,20 +163,24 @@ export const Weather = () => {
   }
 
   return (
-    <>
-      <ScrollView
-        style={[styles.root, { width, height }]}
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-        scrollEnabled={false}
-      >
-        <WeatherGraph weather={weather} width={width} height={height} />
-        <Paginator
-          weather={weather}
-          currentIndex={currentIndex}
-          swipeDirection={directionRef.current > 0 ? "right" : "left"}
-        />
-      </ScrollView>
+    <View style={styles.root}>
+      <GestureDetector gesture={gesture}>
+        <View>
+          <WeatherGraph
+            weather={weather}
+            width={width}
+            height={height}
+            currentIndex={currentIndex}
+            swipeDirection={directionRef.current > 0 ? "right" : "left"}
+          />
+          <Paginator
+            weather={weather}
+            currentIndex={currentIndex}
+            swipeDirection={directionRef.current > 0 ? "right" : "left"}
+          />
+          <View style={styles.touchableLayer} />
+        </View>
+      </GestureDetector>
       <View style={styles.todo}>
         <Button
           title="next"
@@ -155,6 +199,6 @@ export const Weather = () => {
           }}
         />
       </View>
-    </>
+    </View>
   );
 };

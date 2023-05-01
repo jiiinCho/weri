@@ -7,6 +7,8 @@ import { StatusBar } from "expo-status-bar";
 
 import { Weather } from "./src/components";
 
+import "react-native-gesture-handler";
+
 const { RealmProvider } = weatherContext;
 
 const App = () => {

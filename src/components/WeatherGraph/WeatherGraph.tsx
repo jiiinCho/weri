@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Text as DefaultText, View } from "react-native";
 import {
   Canvas,
@@ -38,12 +38,6 @@ type WeatherMetaData = {
   name: string;
 };
 
-type WeatherItemProps = {
-  weather: WeatherForecast[];
-  width: number;
-  height: number;
-};
-
 type YAxisMeta = {
   yAxisText: number[];
   yAxisPosition: number[];
@@ -55,7 +49,21 @@ type XAxisMeta = {
   yAxisPositionUnit: number;
 };
 
-export const WeatherGraph = ({ weather, width, height }: WeatherItemProps) => {
+type WeatherItemProps = {
+  weather: WeatherForecast[];
+  width: number;
+  height: number;
+  currentIndex: number;
+  swipeDirection: "right" | "left";
+};
+
+export const WeatherGraph = ({
+  weather,
+  width,
+  height,
+  currentIndex,
+  swipeDirection,
+}: WeatherItemProps) => {
   const graphHeight = height * 0.6;
   const graphWidth = width;
 
@@ -75,106 +83,131 @@ export const WeatherGraph = ({ weather, width, height }: WeatherItemProps) => {
   const yAxisRef = useRef<YAxisMeta[]>([]);
   const xAxisRef = useRef<XAxisMeta | undefined>(undefined);
 
-  const makeGraph = (data: WeatherMetaData): GraphData => {
-    const { minTemperature, maxTemperature, weatherGraph, name } = data;
+  const makeGraph = useCallback(
+    (data: WeatherMetaData): GraphData => {
+      const { minTemperature, maxTemperature, weatherGraph, name } = data;
 
-    const minThird = Math.floor(minTemperature / 2);
-    const maxThird = Math.floor(maxTemperature / 2);
-    const yMinRange = minThird * 2 - 2 * 2;
-    const yMaxRange = maxThird * 2 + 2 * 2;
+      const minThird = Math.floor(minTemperature / 2);
+      const maxThird = Math.floor(maxTemperature / 2);
+      const yMinRange = minThird * 2 - 2 * 2;
+      const yMaxRange = maxThird * 2 + 2 * 2;
 
-    const y = scaleLinear()
-      .domain([yMinRange, yMaxRange])
-      .range([graphHeight - margin.bottom, margin.top]);
+      const y = scaleLinear()
+        .domain([yMinRange, yMaxRange])
+        .range([graphHeight - margin.bottom, margin.top]);
 
-    const yAxisText = y.ticks();
-    const yAxisPosition = yAxisText.map((text: number) => y(text));
+      const yAxisText = y.ticks();
+      const yAxisPosition = yAxisText.map((text: number) => y(text));
 
-    const yAxisMeta: YAxisMeta = { yAxisText, yAxisPosition, name };
-    const previousYAxis = yAxisRef.current;
-    const found = previousYAxis.find(({ name: cityName }) => cityName === name);
-    if (!found) {
-      yAxisRef.current = [...previousYAxis, yAxisMeta];
-    }
-
-    const x = scaleTime()
-      .domain([
-        new Date(weatherGraph[0].time),
-        new Date(weatherGraph[weatherGraph.length - 1].time),
-      ])
-      .range([margin.left, graphWidth - margin.right]);
-
-    const curvedLine = line<WeatherGraphData>()
-      .x(({ time }: WeatherGraphData) => x(new Date(time)))
-      .y(({ temperature }: WeatherGraphData) => y(temperature))
-      .curve(curveBasis)(weatherGraph);
-
-    const skPath = !!curvedLine && Skia.Path.MakeFromSVGString(curvedLine);
-
-    return {
-      max: maxTemperature,
-      min: minTemperature,
-      curve: skPath,
-    };
-  };
-
-  const getWeatherGraphData = (weatherIndex: number): WeatherMetaData => {
-    const { temperature, time, name } = weather[weatherIndex];
-    const min = Math.min(...temperature);
-    const max = Math.max(...temperature);
-
-    const weatherGraph = temperature.map((temperatureItem, index) => ({
-      temperature: temperatureItem,
-      time: time[index],
-    }));
-
-    if (!xAxisRef.current) {
-      const xAxisText = time.map((timeString: string) =>
-        new Date(timeString).getHours()
+      const yAxisMeta: YAxisMeta = { yAxisText, yAxisPosition, name };
+      const previousYAxis = yAxisRef.current;
+      const found = previousYAxis.find(
+        ({ name: cityName }) => cityName === name
       );
+      if (!found) {
+        yAxisRef.current = [...previousYAxis, yAxisMeta];
+      }
 
-      xAxisRef.current = {
-        xAxisText,
-        yAxisPositionUnit:
-          (graphWidth - margin.left - margin.left) / xAxisText.length,
+      const x = scaleTime()
+        .domain([
+          new Date(weatherGraph[0].time),
+          new Date(weatherGraph[weatherGraph.length - 1].time),
+        ])
+        .range([margin.left, graphWidth - margin.right]);
+
+      const curvedLine = line<WeatherGraphData>()
+        .x(({ time }: WeatherGraphData) => x(new Date(time)))
+        .y(({ temperature }: WeatherGraphData) => y(temperature))
+        .curve(curveBasis)(weatherGraph);
+
+      const skPath = !!curvedLine && Skia.Path.MakeFromSVGString(curvedLine);
+
+      return {
+        max: maxTemperature,
+        min: minTemperature,
+        curve: skPath,
       };
-    }
+    },
+    [
+      graphHeight,
+      graphWidth,
+      margin.bottom,
+      margin.left,
+      margin.right,
+      margin.top,
+    ]
+  );
 
-    return {
-      weatherGraph,
-      minTemperature: min,
-      maxTemperature: max,
-      name,
-    };
-  };
+  const getWeatherGraphData = useCallback(
+    (weatherItem: WeatherForecast): WeatherMetaData => {
+      const { temperature, time, name } = weatherItem;
+      const min = Math.min(...temperature);
+      const max = Math.max(...temperature);
 
-  const graphData = [
-    makeGraph(getWeatherGraphData(0)),
-    makeGraph(getWeatherGraphData(1)),
-  ];
+      const weatherGraph = temperature.map((temperatureItem, index) => ({
+        temperature: temperatureItem,
+        time: time[index],
+      }));
+
+      if (!xAxisRef.current) {
+        const xAxisText = time.map((timeString: string) =>
+          new Date(timeString).getHours()
+        );
+
+        xAxisRef.current = {
+          xAxisText,
+          yAxisPositionUnit:
+            (graphWidth - margin.left - margin.left) / xAxisText.length,
+        };
+      }
+
+      return {
+        weatherGraph,
+        minTemperature: min,
+        maxTemperature: max,
+        name,
+      };
+    },
+    [graphWidth, margin.left]
+  );
+
+  const graphData = useRef<GraphData[]>(
+    weather.map((weatherItem: WeatherForecast) =>
+      makeGraph(getWeatherGraphData(weatherItem))
+    )
+  );
 
   const [yAxis, setYAxis] = useState<YAxisMeta | undefined>(
     yAxisRef.current[0]
   );
 
-  const transitionStart = (end: number) => {
-    state.current = {
-      current: end,
-      next: state.current.current,
-    };
-    const yAxisMeta = yAxisRef.current?.[end];
-    setYAxis(yAxisMeta);
+  const transitionStart = useCallback(
+    (end: number) => {
+      state.current = {
+        current: end,
+        next: state.current.current,
+      };
 
-    transition.current = 0;
-    runTiming(transition, 1, {
-      duration: 750,
-      easing: Easing.inOut(Easing.cubic),
-    });
-  };
+      const yAxisMeta = yAxisRef.current?.[end];
+      setYAxis(yAxisMeta);
+
+      transition.current = 0;
+      runTiming(transition, 1, {
+        duration: 750,
+        easing: Easing.inOut(Easing.cubic),
+      });
+    },
+    [state, transition]
+  );
 
   const path = useComputedValue(() => {
-    const start = graphData[state.current.current].curve;
-    const end = graphData[state.current.next].curve;
+    if (weather.length < 2) {
+      return graphData.current[state.current.current].curve || "0";
+    }
+
+    const start = graphData.current[state.current.current].curve;
+    const end = graphData.current[state.current.next].curve;
+
     if (!start || !end) {
       return "0";
     }
@@ -191,7 +224,37 @@ export const WeatherGraph = ({ weather, width, height }: WeatherItemProps) => {
   const fontSize = 16;
   const font = useFont(DMSansRegular, fontSize);
 
-  if (!graphData || !font || !yAxis || !xAxisRef.current) {
+  useEffect(() => {
+    const previousGraphData = graphData.current;
+
+    if (graphData.current.length < weather.length) {
+      const newMaps = makeGraph(getWeatherGraphData(weather[currentIndex]));
+      graphData.current = [...previousGraphData, newMaps];
+    }
+
+    let targetIndex =
+      swipeDirection === "left"
+        ? previousGraphData.length + 1
+        : previousGraphData.length - 1;
+    if (targetIndex < 0) {
+      targetIndex = 0;
+    }
+
+    if (targetIndex > currentIndex) {
+      targetIndex = currentIndex;
+    }
+
+    transitionStart(targetIndex);
+  }, [
+    currentIndex,
+    getWeatherGraphData,
+    makeGraph,
+    swipeDirection,
+    transitionStart,
+    weather,
+  ]);
+
+  if (!graphData.current.length || !font || !yAxis || !xAxisRef.current) {
     return null;
   }
 

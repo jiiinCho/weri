@@ -11,7 +11,7 @@ import {
 import { WeatherForecast } from "@src/consts";
 import { curveBasis, line, scaleLinear, scaleTime } from "d3";
 
-import { styles } from "./WeatherItem.styles";
+import { styles } from "./WeatherGraph.styles";
 
 interface GraphData {
   min: number;
@@ -27,7 +27,7 @@ type WeatherItemProps = {
   height: number;
 };
 
-export const WeatherItem = ({ weather, width, height }: WeatherItemProps) => {
+export const WeatherGraph = ({ weather, width, height }: WeatherItemProps) => {
   const graphHeight = height * 0.75;
   const graphWidth = width;
 

@@ -3,7 +3,8 @@ import { StyleSheet } from "react-native";
 export const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "tomato",
+    justifyContent: "center",
+    alignItems: "center",
   },
   todo: {
     flexDirection: "row",

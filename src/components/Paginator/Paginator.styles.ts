@@ -2,10 +2,11 @@ import { StyleSheet } from "react-native";
 
 export const styles = StyleSheet.create({
   root: {
-    flexDirection: "row",
-    height: 64,
+    flex: 1,
     alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "gold",
+    flexDirection: "row",
   },
   defaultDot: {
     height: 10,
@@ -13,6 +14,9 @@ export const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: "#493d8a",
     marginHorizontal: 8,
+  },
+  largeDot: {
+    backgroundColor: "dodgerblue",
   },
   mediumDot: {
     height: 7,

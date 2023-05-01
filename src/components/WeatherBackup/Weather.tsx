@@ -1,23 +1,22 @@
-/* eslint-disable no-console */
 import { useCallback, useRef, useState } from "react";
 import {
   Animated,
   Button,
   Dimensions,
-  ScrollView,
+  FlatList,
   Text,
   View,
+  ViewToken,
 } from "react-native";
 import CityCoordinates from "@src/cityCoordinates.json";
 import { METEO_URL, MeteoWeather, WeatherForecast } from "@src/consts";
-import { FetchOptions, useFetch, useSwipe, useWeatherService } from "@src/hook";
+import { FetchOptions, useFetch, useWeatherService } from "@src/hook";
 import { weatherContext } from "@src/models";
 
 import { Paginator } from "../Paginator";
-import { WeatherGraph } from "../WeatherGraph";
+import { WeatherItem } from "../WeatherItem";
 import { Mock } from "./Mock";
 import { styles } from "./Weather.styles";
-
 type Coordinate = {
   name: string;
   coordinates: { latitude: number; longitude: number };
@@ -25,8 +24,6 @@ type Coordinate = {
 const { useRealm } = weatherContext;
 
 export const Weather = () => {
-  const { width, height } = Dimensions.get("screen");
-
   const index = useRef<number>(0);
   const [weather, setWeather] = useState<WeatherForecast[]>(Mock);
   const { errors, loading, fetch } = useFetch<MeteoWeather>();
@@ -95,33 +92,22 @@ export const Weather = () => {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const directionRef = useRef(0);
 
-  const onSwipeLeft = () => {
-    directionRef.current = 1;
-
-    setCurrentIndex((previousIndex: number) => {
-      if (previousIndex === weather.length - 1) {
-        return previousIndex;
+  const viewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: Array<ViewToken> }) => {
+      const currenItemIndex = viewableItems[0].index;
+      if (currenItemIndex) {
+        setCurrentIndex((previousIndex: number) => {
+          directionRef.current = currenItemIndex - previousIndex;
+          return currenItemIndex;
+        });
       }
-      return previousIndex + 1;
-    });
-  };
-
-  const onSwipeRight = () => {
-    directionRef.current = -1;
-    setCurrentIndex((previousIndex: number) => {
-      if (previousIndex === 0) {
-        return previousIndex;
-      }
-      return previousIndex - 1;
-    });
-  };
-
-  const { onTouchStart, onTouchEnd } = useSwipe(
-    scrollX,
-    onSwipeLeft,
-    onSwipeRight,
-    6
+    },
+    []
   );
+
+  const viewConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
+  const weatherRef = useRef(null);
+  const { width, height } = Dimensions.get("screen");
 
   if (errors) {
     return <Text>error</Text>;
@@ -137,20 +123,38 @@ export const Weather = () => {
 
   return (
     <>
-      <ScrollView
-        style={[styles.root, { width, height }]}
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-        scrollEnabled={false}
-      >
-        <WeatherGraph weather={weather[0]} width={width} height={height} />
+      <View style={styles.root}>
+        <FlatList
+          data={weather}
+          renderItem={({ item }: { item: WeatherForecast }) => (
+            <WeatherItem weather={item} width={width} height={height} />
+          )}
+          showsHorizontalScrollIndicator={false}
+          horizontal
+          pagingEnabled
+          bounces={false}
+          keyExtractor={(item: WeatherForecast) => item.id}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+            { useNativeDriver: false } // for background change animation
+          )}
+          viewabilityConfig={viewConfig}
+          onViewableItemsChanged={viewableItemsChanged}
+          scrollEventThrottle={32}
+          ref={weatherRef}
+          getItemLayout={(_, itemIndex: number) => ({
+            length: width,
+            offset: width * itemIndex,
+            index: itemIndex,
+          })}
+        />
         <Paginator
           weather={weather}
           scrollX={scrollX}
           currentIndex={currentIndex}
           swipeDirection={directionRef.current > 0 ? "right" : "left"}
         />
-      </ScrollView>
+      </View>
       <View style={styles.todo}>
         <Button
           title="next"

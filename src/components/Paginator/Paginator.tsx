@@ -1,5 +1,5 @@
-/* eslint-disable no-console */
-import { Animated, Dimensions, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, Easing, View } from "react-native";
 import { WeatherForecast } from "@src/consts";
 
 import { styles } from "./Paginator.styles";
@@ -12,116 +12,144 @@ type PaginatorProps = {
 
 export const Paginator = ({
   weather,
-  scrollX,
   currentIndex,
   swipeDirection,
 }: PaginatorProps) => {
-  const { width } = Dimensions.get("screen");
-
   const maxIndex = weather.length - 1;
-  let indexIndicator = currentIndex % 5;
 
-  if (
-    currentIndex > 3 &&
-    currentIndex < maxIndex &&
-    swipeDirection === "right"
-  ) {
-    indexIndicator = 3;
-  }
+  const getLargeDotIndex = (): number => {
+    let indexIndicator = currentIndex % 5;
+    if (
+      currentIndex > 3 &&
+      currentIndex < maxIndex &&
+      swipeDirection === "right"
+    ) {
+      indexIndicator = 3;
+    }
 
-  if (
-    currentIndex < maxIndex - 1 &&
-    currentIndex > 1 &&
-    swipeDirection === "left"
-  ) {
-    indexIndicator = 2;
-  }
+    if (
+      currentIndex < maxIndex - 1 &&
+      currentIndex > 1 &&
+      swipeDirection === "left"
+    ) {
+      indexIndicator = 2;
+    }
 
-  if (currentIndex === maxIndex) {
-    indexIndicator = 4;
-  }
+    if (currentIndex === maxIndex) {
+      indexIndicator = 4;
+    }
 
-  if (currentIndex === maxIndex - 1) {
-    indexIndicator = 3;
-  }
+    if (currentIndex === maxIndex - 1) {
+      indexIndicator = 3;
+    }
 
-  const inputRange = [
-    (currentIndex - 1) * width,
-    currentIndex * width,
-    (currentIndex + 1) * width,
-  ];
+    return indexIndicator;
+  };
 
-  const dotSize = scrollX.interpolate({
-    inputRange,
-    outputRange: [10, 14, 10],
-    extrapolate: "clamp",
-  });
+  const getLastDotStyle = (): number | undefined => {
+    let indexIndicator;
+    if (
+      currentIndex > 3 &&
+      currentIndex < maxIndex - 1 &&
+      swipeDirection === "right"
+    ) {
+      indexIndicator = 4;
+    }
 
-  const dotRadius = scrollX.interpolate({
-    inputRange,
-    outputRange: [5, 7, 5],
-    extrapolate: "clamp",
-  });
+    if (
+      currentIndex > 3 &&
+      currentIndex < maxIndex - 2 &&
+      swipeDirection === "left"
+    ) {
+      indexIndicator = 4;
+    }
+
+    return indexIndicator;
+  };
+
+  const getFirstDotStyle = (): number | undefined => {
+    let indexIndicator;
+    if (currentIndex > 3 && swipeDirection === "right") {
+      indexIndicator = 0;
+    }
+
+    if (currentIndex > 2 && swipeDirection === "left") {
+      indexIndicator = 0;
+    }
+
+    return indexIndicator;
+  };
+
+  const onAnimateRef = useRef(false);
+
+  useEffect(() => {
+    if (currentIndex > 2 && currentIndex < maxIndex - 1) {
+      onAnimateRef.current = true;
+    } else {
+      onAnimateRef.current = false;
+    }
+  }, [currentIndex, maxIndex]);
+
+  const bounce = useRef(new Animated.Value(0)).current;
+  const scaleBounce = useRef(new Animated.Value(0)).current;
 
   return (
     <View style={styles.root}>
-      <Animated.View
-        style={[
-          styles.defaultDot,
-          indexIndicator === 0 && {
-            width: dotSize,
-            height: dotSize,
-            borderRadius: dotRadius,
-          },
-          currentIndex > 2 && styles.mediumDot,
-        ]}
-        key={0}
-      />
-      <Animated.View
-        style={[
-          styles.defaultDot,
-          indexIndicator === 1 && {
-            width: dotSize,
-            height: dotSize,
-            borderRadius: dotRadius,
-          },
-        ]}
-        key={1}
-      />
-      <Animated.View
-        style={[
-          styles.defaultDot,
-          indexIndicator === 2 && {
-            width: dotSize,
-            height: dotSize,
-            borderRadius: dotRadius,
-          },
-        ]}
-        key={2}
-      />
-      <Animated.View
-        style={[
-          styles.defaultDot,
-          indexIndicator === 3 && {
-            width: dotSize,
-            height: dotSize,
-            borderRadius: dotRadius,
-          },
-        ]}
-        key={3}
-      />
-      <Animated.View
-        style={[
-          styles.defaultDot,
-          indexIndicator === 4 && {
-            width: dotSize,
-            height: dotSize,
-            borderRadius: dotRadius,
-          },
-          currentIndex < maxIndex - 1 && styles.mediumDot,
-        ]}
-        key={4}
-      />
+      {[0, 1, 2, 3, 4].map((dotItemIndex: number) => {
+        const scale = scaleBounce.interpolate({
+          inputRange: [0, 100],
+          outputRange: [1, 0.25],
+        });
+
+        const opacity = scaleBounce.interpolate({
+          inputRange: [0, 100],
+          outputRange: [1, 0.25],
+        });
+
+        const rightOutputRange = [-10, 0, 10];
+        const leftOutputRange = [10, 0, 10];
+
+        const translateX = bounce.interpolate({
+          inputRange: [-100, 0, 100],
+          outputRange:
+            swipeDirection === "right" ? rightOutputRange : leftOutputRange,
+        });
+
+        if (onAnimateRef.current) {
+          Animated.parallel([
+            Animated.timing(bounce, {
+              toValue: 100 * (swipeDirection === "right" ? -1 : 1),
+              duration: 350,
+              easing: Easing.ease,
+              useNativeDriver: true,
+            }),
+            Animated.timing(scaleBounce, {
+              toValue: 100,
+              duration: 150,
+              easing: Easing.bounce,
+              useNativeDriver: true,
+            }),
+          ]).start(({ finished }) => {
+            if (finished) {
+              scaleBounce.setValue(0);
+              bounce.setValue(0);
+            }
+          });
+        }
+
+        return (
+          <Animated.View
+            key={dotItemIndex}
+            style={[
+              styles.defaultDot,
+              { opacity, transform: [{ translateX }, { scale }] },
+              dotItemIndex === getLargeDotIndex() && styles.largeDot,
+              dotItemIndex === getLastDotStyle() && styles.mediumDot,
+              dotItemIndex === getFirstDotStyle() && styles.mediumDot,
+            ]}
+          />
+        );
+      })}
     </View>
   );
 };

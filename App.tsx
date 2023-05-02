@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { SafeAreaView, StyleSheet } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { COLORS } from "@src/consts";
 import { weatherContext } from "@src/models";
 import { useFonts } from "expo-font";
@@ -30,10 +31,12 @@ const App = () => {
   }
 
   return (
-    <SafeAreaView style={styles.root} onLayout={onLayoutRootView}>
-      <StatusBar style="auto" />
-      <Weather />
-    </SafeAreaView>
+    <GestureHandlerRootView style={styles.gesture}>
+      <SafeAreaView style={styles.root} onLayout={onLayoutRootView}>
+        <StatusBar style="auto" />
+        <Weather />
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 };
 
@@ -43,6 +46,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     alignItems: "center",
     justifyContent: "center",
+  },
+  gesture: {
+    flex: 1,
   },
 });
 
